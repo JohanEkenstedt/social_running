@@ -36,11 +36,35 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const map = L.map('map').setView([64.039419, 20.047025], 13);
+    const map = L.map('map', {
+      center: [64.039419, 20.047025],
+      zoom: 13
+    });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18,
+    // Base layers
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
     }).addTo(map);
+
+    const googleSat = L.tileLayer('http://www.google.cn/maps/vt?lyrs=s@189&gl=cn&x={x}&y={y}&z={z}', {
+      maxZoom: 19,
+      attribution: '© Google Satellite'
+    });
+
+    const baseLayers = {
+      "OpenStreetMap": osm,
+      "Google Satellite": googleSat
+    };
+
+    L.control.layers(baseLayers, null, { position: 'bottomright' }).addTo(map);
+
+    // Color map for tracks
+    const colorMap = {
+      "5 km": "white",
+      "10 km": "darkred",
+      "15 km": "orange"
+    };
 
     const routeLayers = {
       "5 km": L.layerGroup(),
@@ -48,13 +72,7 @@
       "15 km": L.layerGroup()
     };
 
-    const colorMap = {
-      "5 km": "white",
-      "10 km": "darkred",
-      "15 km": "orange"
-    };
-
-    // Load GeoJSON and assign to correct layer
+    // Load GeoJSON and split into layer groups
     fetch('TavelsjoSocial.geojson')
       .then(res => res.json())
       .then(data => {
@@ -75,15 +93,15 @@
           }
         });
 
-        // Add in reverse order so 5 km is on top
+        // Add in reverse order so shorter distances are on top
         routeLayers["15 km"].addTo(map);
         routeLayers["10 km"].addTo(map);
         routeLayers["5 km"].addTo(map);
       });
 
-    // Add toggle controls (legend + checkbox)
+    // Add legend with toggles
     const legend = L.control({ position: "topleft" });
-    legend.onAdd = function (map) {
+    legend.onAdd = function () {
       const div = L.DomUtil.create("div", "legend");
       div.innerHTML = `
         <strong>Löprundor:</strong><br/>
@@ -95,7 +113,6 @@
     };
     legend.addTo(map);
 
-    // Add checkbox functionality
     function toggleLayer(id, key) {
       const checkbox = document.getElementById(id);
       checkbox.addEventListener('change', () => {
@@ -111,7 +128,7 @@
     toggleLayer("chk-10", "10 km");
     toggleLayer("chk-15", "15 km");
 
-    // Add user location button
+    // Add location button
     const locateControl = L.control({position: 'topright'});
     locateControl.onAdd = function () {
       const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
