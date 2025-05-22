@@ -18,18 +18,20 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const map = L.map('map').setView([63.9, 20], 12); // Adjusted center for Tavelsjö
+    const map = L.map('map').setView([63.9, 20], 12); // Adjust center for Tavelsjö
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
     }).addTo(map);
 
-    // Color by route name
+    // Match name to color
     function getColor(name) {
-      if (name.includes("5")) return "white";
-      if (name.includes("10")) return "darkred";
-      if (name.includes("15")) return "orange";
-      return "blue";
+      switch (name) {
+        case "5 km": return "white";
+        case "10 km": return "darkred";
+        case "15 km": return "orange";
+        default: return "blue";
+      }
     }
 
     fetch('TavelsjoSocial.geojson')
@@ -40,13 +42,13 @@
             return {
               color: getColor(feature.properties.name || ""),
               weight: 4,
-              opacity: 0.8
+              opacity: 0.9
             };
           }
         }).addTo(map);
       });
 
-    // Add a button to show user location
+    // Button to show user location
     const locateControl = L.control({position: 'topright'});
     locateControl.onAdd = function () {
       const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
