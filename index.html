@@ -29,6 +29,11 @@
       margin-right: 8px;
       border: 1px solid #ccc;
     }
+
+    /* Add margin around the basemap switcher */
+    .leaflet-control-layers {
+      margin: 10px !important;
+    }
   </style>
 </head>
 <body>
@@ -42,27 +47,27 @@
     });
 
     // Base layers
-  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution: '© OpenStreetMap contributors'
-});
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    });
 
-const googleSat = L.tileLayer('http://www.google.cn/maps/vt?lyrs=s@189&gl=cn&x={x}&y={y}&z={z}', {
-  maxZoom: 19,
-  attribution: '© Google Satellite'
-});
+    const googleSat = L.tileLayer('http://www.google.cn/maps/vt?lyrs=s@189&gl=cn&x={x}&y={y}&z={z}', {
+      maxZoom: 19,
+      attribution: '© Google Satellite'
+    });
 
-// ✅ Set Google Satellite as the initial basemap
-googleSat.addTo(map);
+    // Add Google Satellite as default base layer
+    googleSat.addTo(map);
 
-const baseLayers = {
-  "Google Satellite": googleSat,
-  "OpenStreetMap": osm
-};
+    const baseLayers = {
+      "Google Satellite": googleSat,
+      "OpenStreetMap": osm
+    };
 
     L.control.layers(baseLayers, null, { position: 'bottomright' }).addTo(map);
 
-    // Color map for tracks
+    // Color map
     const colorMap = {
       "5 km": "white",
       "10 km": "darkred",
@@ -75,7 +80,7 @@ const baseLayers = {
       "15 km": L.layerGroup()
     };
 
-    // Load GeoJSON and split into layer groups
+    // Load GeoJSON and split into layers
     fetch('TavelsjoSocial.geojson')
       .then(res => res.json())
       .then(data => {
@@ -96,13 +101,13 @@ const baseLayers = {
           }
         });
 
-        // Add in reverse order so shorter distances are on top
+        // Add in this order to control layer stacking
         routeLayers["15 km"].addTo(map);
         routeLayers["10 km"].addTo(map);
         routeLayers["5 km"].addTo(map);
       });
 
-    // Add legend with toggles
+    // Legend with toggles
     const legend = L.control({ position: "topleft" });
     legend.onAdd = function () {
       const div = L.DomUtil.create("div", "legend");
@@ -131,7 +136,9 @@ const baseLayers = {
     toggleLayer("chk-10", "10 km");
     toggleLayer("chk-15", "15 km");
 
-    // Add location button
+    // GPS tracking
+    let userMarker;
+
     const locateControl = L.control({position: 'topright'});
     locateControl.onAdd = function () {
       const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
@@ -142,13 +149,24 @@ const baseLayers = {
 
     document.getElementById('locateBtn').onclick = function(e) {
       e.preventDefault();
-      map.locate({ setView: true, maxZoom: 16 });
-      map.on('locationfound', function(e) {
-        L.marker(e.latlng).addTo(map)
-          .bindPopup("You are here")
-          .openPopup();
+
+      map.locate({
+        setView: true,
+        maxZoom: 16,
+        watch: true,
+        enableHighAccuracy: true
       });
-      map.on('locationerror', function(e) {
+
+      map.on('locationfound', function(e) {
+        if (!userMarker) {
+          userMarker = L.marker(e.latlng).addTo(map)
+            .bindPopup("You are here").openPopup();
+        } else {
+          userMarker.setLatLng(e.latlng);
+        }
+      });
+
+      map.on('locationerror', function() {
         alert("Location access denied.");
       });
     };
