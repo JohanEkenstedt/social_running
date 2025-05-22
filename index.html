@@ -7,9 +7,27 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     #map { height: 100vh; width: 100vw; margin: 0; }
-    .leaflet-top.leaflet-right {
-      top: 10px;
-      right: 10px;
+
+    .legend {
+      background: white;
+      padding: 10px;
+      font-size: 14px;
+      line-height: 1.5;
+      border-radius: 5px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    }
+
+    .legend div {
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+    }
+
+    .legend-color-box {
+      width: 20px;
+      height: 10px;
+      margin-right: 8px;
+      border: 1px solid #ccc;
     }
   </style>
 </head>
@@ -28,7 +46,7 @@
       if (namn === "5 km") return "white";
       if (namn === "10 km") return "darkred";
       if (namn === "15 km") return "orange";
-      return "blue"; // fallback color
+      return "blue";
     }
 
     fetch('TavelsjoSocial.geojson')
@@ -40,13 +58,19 @@
             return {
               color: getColorByNamn(namn),
               weight: 4,
-              opacity: 0.9
+              opacity: 1
             };
+          },
+          onEachFeature: function (feature, layer) {
+            const namn = feature.properties.Namn;
+            if (namn) {
+              layer.bindPopup("Track: " + namn);
+            }
           }
         }).addTo(map);
       });
 
-    // Add a GPS location button
+    // Add location button
     const locateControl = L.control({position: 'topright'});
     locateControl.onAdd = function () {
       const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
@@ -58,17 +82,29 @@
     document.getElementById('locateBtn').onclick = function(e) {
       e.preventDefault();
       map.locate({ setView: true, maxZoom: 16 });
-
       map.on('locationfound', function(e) {
         L.marker(e.latlng).addTo(map)
           .bindPopup("You are here")
           .openPopup();
       });
-
       map.on('locationerror', function(e) {
         alert("Location access denied.");
       });
     };
+
+    // Add legend
+    const legend = L.control({ position: "topleft" });
+    legend.onAdd = function (map) {
+      const div = L.DomUtil.create("div", "legend");
+      div.innerHTML = `
+        <strong>Löprundor:</strong>
+        <div><span class="legend-color-box" style="background:white;"></span>5 km</div>
+        <div><span class="legend-color-box" style="background:darkred;"></span>10 km</div>
+        <div><span class="legend-color-box" style="background:orange;"></span>15 km</div>
+      `;
+      return div;
+    };
+    legend.addTo(map);
   </script>
 </body>
 </html>
