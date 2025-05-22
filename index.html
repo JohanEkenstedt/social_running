@@ -42,35 +42,76 @@
       maxZoom: 18,
     }).addTo(map);
 
-    function getColorByNamn(namn) {
-      if (namn === "5 km") return "white";
-      if (namn === "10 km") return "darkred";
-      if (namn === "15 km") return "orange";
-      return "blue";
-    }
+    const routeLayers = {
+      "5 km": L.layerGroup(),
+      "10 km": L.layerGroup(),
+      "15 km": L.layerGroup()
+    };
 
+    const colorMap = {
+      "5 km": "white",
+      "10 km": "darkred",
+      "15 km": "orange"
+    };
+
+    // Load GeoJSON and assign to correct layer
     fetch('TavelsjoSocial.geojson')
       .then(res => res.json())
       .then(data => {
-        L.geoJSON(data, {
-          style: function(feature) {
-            const namn = feature.properties.Namn?.trim();
-            return {
-              color: getColorByNamn(namn),
+        data.features.forEach(feature => {
+          const namn = feature.properties.Namn?.trim();
+          const layer = L.geoJSON(feature, {
+            style: {
+              color: colorMap[namn] || "blue",
               weight: 4,
               opacity: 1
-            };
-          },
-          onEachFeature: function (feature, layer) {
-            const namn = feature.properties.Namn;
-            if (namn) {
+            },
+            onEachFeature: (feature, layer) => {
               layer.bindPopup("Track: " + namn);
             }
+          });
+          if (routeLayers[namn]) {
+            routeLayers[namn].addLayer(layer);
           }
-        }).addTo(map);
+        });
+
+        // Add in reverse order so 5 km is on top
+        routeLayers["15 km"].addTo(map);
+        routeLayers["10 km"].addTo(map);
+        routeLayers["5 km"].addTo(map);
       });
 
-    // Add location button
+    // Add toggle controls (legend + checkbox)
+    const legend = L.control({ position: "topleft" });
+    legend.onAdd = function (map) {
+      const div = L.DomUtil.create("div", "legend");
+      div.innerHTML = `
+        <strong>Löprundor:</strong><br/>
+        <div><input type="checkbox" id="chk-5" checked><span class="legend-color-box" style="background:white;"></span>5 km</div>
+        <div><input type="checkbox" id="chk-10" checked><span class="legend-color-box" style="background:darkred;"></span>10 km</div>
+        <div><input type="checkbox" id="chk-15" checked><span class="legend-color-box" style="background:orange;"></span>15 km</div>
+      `;
+      return div;
+    };
+    legend.addTo(map);
+
+    // Add checkbox functionality
+    function toggleLayer(id, key) {
+      const checkbox = document.getElementById(id);
+      checkbox.addEventListener('change', () => {
+        if (checkbox.checked) {
+          routeLayers[key].addTo(map);
+        } else {
+          map.removeLayer(routeLayers[key]);
+        }
+      });
+    }
+
+    toggleLayer("chk-5", "5 km");
+    toggleLayer("chk-10", "10 km");
+    toggleLayer("chk-15", "15 km");
+
+    // Add user location button
     const locateControl = L.control({position: 'topright'});
     locateControl.onAdd = function () {
       const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
@@ -91,20 +132,6 @@
         alert("Location access denied.");
       });
     };
-
-    // Add legend
-    const legend = L.control({ position: "topleft" });
-    legend.onAdd = function (map) {
-      const div = L.DomUtil.create("div", "legend");
-      div.innerHTML = `
-        <strong>Löprundor:</strong>
-        <div><span class="legend-color-box" style="background:white;"></span>5 km</div>
-        <div><span class="legend-color-box" style="background:darkred;"></span>10 km</div>
-        <div><span class="legend-color-box" style="background:orange;"></span>15 km</div>
-      `;
-      return div;
-    };
-    legend.addTo(map);
   </script>
 </body>
 </html>
