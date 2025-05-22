@@ -18,31 +18,27 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const map = L.map('map').setView([64.039419, 20.047025], 13); // Updated center
+    const map = L.map('map').setView([64.039419, 20.047025], 13);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
     }).addTo(map);
 
-    function getColorByDistance(distanceLabel) {
-      if (distanceLabel === "5 km") return "white";
-      if (distanceLabel === "10 km") return "darkred";
-      if (distanceLabel === "15 km") return "orange";
-      return "blue";
+    function getColorByNamn(namn) {
+      if (namn === "5 km") return "white";
+      if (namn === "10 km") return "darkred";
+      if (namn === "15 km") return "orange";
+      return "blue"; // fallback color
     }
 
     fetch('TavelsjoSocial.geojson')
       .then(res => res.json())
       .then(data => {
-        console.log("GeoJSON loaded:", data);
-
         L.geoJSON(data, {
           style: function(feature) {
-            const name = feature.properties.name?.trim(); // ensure clean match
-            const color = getColorByDistance(name);
-            console.log("Feature:", name, "→", color);
+            const namn = feature.properties.Namn?.trim();
             return {
-              color: color,
+              color: getColorByNamn(namn),
               weight: 4,
               opacity: 0.9
             };
@@ -50,7 +46,7 @@
         }).addTo(map);
       });
 
-    // Add user location button
+    // Add a GPS location button
     const locateControl = L.control({position: 'topright'});
     locateControl.onAdd = function () {
       const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
