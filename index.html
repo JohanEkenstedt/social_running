@@ -30,9 +30,13 @@
       border: 1px solid #ccc;
     }
 
-    /* Add margin around the basemap switcher */
     .leaflet-control-layers {
       margin: 10px !important;
+    }
+
+    .leaflet-bar a {
+      text-align: center;
+      font-size: 20px;
     }
   </style>
 </head>
@@ -57,7 +61,7 @@
       attribution: '© Google Satellite'
     });
 
-    // Add Google Satellite as default base layer
+    // Set Google as default
     googleSat.addTo(map);
 
     const baseLayers = {
@@ -67,7 +71,7 @@
 
     L.control.layers(baseLayers, null, { position: 'bottomright' }).addTo(map);
 
-    // Color map
+    // Track styling
     const colorMap = {
       "5 km": "white",
       "10 km": "darkred",
@@ -80,7 +84,7 @@
       "15 km": L.layerGroup()
     };
 
-    // Load GeoJSON and split into layers
+    // Load GeoJSON
     fetch('TavelsjoSocial.geojson')
       .then(res => res.json())
       .then(data => {
@@ -101,13 +105,13 @@
           }
         });
 
-        // Add in this order to control layer stacking
+        // Add in order so 5 km is on top
         routeLayers["15 km"].addTo(map);
         routeLayers["10 km"].addTo(map);
         routeLayers["5 km"].addTo(map);
       });
 
-    // Legend with toggles
+    // Track toggles
     const legend = L.control({ position: "topleft" });
     legend.onAdd = function () {
       const div = L.DomUtil.create("div", "legend");
@@ -136,10 +140,12 @@
     toggleLayer("chk-10", "10 km");
     toggleLayer("chk-15", "15 km");
 
-    // GPS tracking
+    // 📍 GPS tracking with toggle
     let userMarker;
+    let watchId = null;
+    let isTracking = false;
 
-    const locateControl = L.control({position: 'topright'});
+    const locateControl = L.control({ position: 'topright' });
     locateControl.onAdd = function () {
       const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
       div.innerHTML = '<a href="#" title="Show my location" id="locateBtn" style="display: block; padding: 5px;">📍</a>';
@@ -147,28 +153,49 @@
     };
     locateControl.addTo(map);
 
-    document.getElementById('locateBtn').onclick = function(e) {
-      e.preventDefault();
-
-      map.locate({
-        setView: true,
-        maxZoom: 16,
-        watch: true,
-        enableHighAccuracy: true
-      });
-
-      map.on('locationfound', function(e) {
-        if (!userMarker) {
-          userMarker = L.marker(e.latlng).addTo(map)
-            .bindPopup("You are here").openPopup();
-        } else {
-          userMarker.setLatLng(e.latlng);
+    function startTracking() {
+      watchId = navigator.geolocation.watchPosition(
+        function (pos) {
+          const latlng = [pos.coords.latitude, pos.coords.longitude];
+          if (!userMarker) {
+            userMarker = L.marker(latlng).addTo(map).bindPopup("You are here").openPopup();
+          } else {
+            userMarker.setLatLng(latlng);
+          }
+          map.setView(latlng, 16);
+        },
+        function () {
+          alert("Location access denied.");
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 1000
         }
-      });
+      );
+      isTracking = true;
+      document.getElementById("locateBtn").innerText = "🟢"; // active icon
+    }
 
-      map.on('locationerror', function() {
-        alert("Location access denied.");
-      });
+    function stopTracking() {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+      if (userMarker) {
+        map.removeLayer(userMarker);
+        userMarker = null;
+      }
+      isTracking = false;
+      document.getElementById("locateBtn").innerText = "📍"; // default icon
+    }
+
+    document.getElementById('locateBtn').onclick = function (e) {
+      e.preventDefault();
+      if (!isTracking) {
+        startTracking();
+      } else {
+        stopTracking();
+      }
     };
   </script>
 </body>
