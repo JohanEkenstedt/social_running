@@ -7,6 +7,10 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     #map { height: 100vh; width: 100vw; margin: 0; }
+    .leaflet-top.leaflet-right {
+      top: 10px;
+      right: 10px;
+    }
   </style>
 </head>
 <body>
@@ -14,17 +18,57 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const map = L.map('map').setView([60, 15], 5); // Adjust start view as needed
+    const map = L.map('map').setView([63.9, 20], 12); // Adjusted center for Tavelsjö
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
     }).addTo(map);
 
+    // Color by route name
+    function getColor(name) {
+      if (name.includes("5")) return "white";
+      if (name.includes("10")) return "darkred";
+      if (name.includes("15")) return "orange";
+      return "blue";
+    }
+
     fetch('TavelsjoSocial.geojson')
       .then(res => res.json())
       .then(data => {
-        L.geoJSON(data).addTo(map);
+        L.geoJSON(data, {
+          style: function(feature) {
+            return {
+              color: getColor(feature.properties.name || ""),
+              weight: 4,
+              opacity: 0.8
+            };
+          }
+        }).addTo(map);
       });
+
+    // Add a button to show user location
+    const locateControl = L.control({position: 'topright'});
+    locateControl.onAdd = function () {
+      const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+      div.innerHTML = '<a href="#" title="Show my location" id="locateBtn" style="display: block; padding: 5px;">📍</a>';
+      return div;
+    };
+    locateControl.addTo(map);
+
+    document.getElementById('locateBtn').onclick = function(e) {
+      e.preventDefault();
+      map.locate({ setView: true, maxZoom: 16 });
+
+      map.on('locationfound', function(e) {
+        L.marker(e.latlng).addTo(map)
+          .bindPopup("You are here")
+          .openPopup();
+      });
+
+      map.on('locationerror', function(e) {
+        alert("Location access denied.");
+      });
+    };
   </script>
 </body>
 </html>
