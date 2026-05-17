@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     #map { height: 100vh; width: 100vw; margin: 0; }
-
     .legend {
       background: white;
       padding: 10px;
@@ -16,24 +15,20 @@
       border-radius: 5px;
       box-shadow: 0 0 5px rgba(0,0,0,0.3);
     }
-
     .legend div {
       margin-bottom: 5px;
       display: flex;
       align-items: center;
     }
-
     .legend-color-box {
       width: 20px;
       height: 10px;
       margin-right: 8px;
       border: 1px solid #ccc;
     }
-
     .leaflet-control-layers {
       margin: 20px !important;
     }
-
     .leaflet-bar a {
       margin: 20px !important;
       text-align: center;
@@ -43,89 +38,78 @@
 </head>
 <body>
   <div id="map"></div>
-
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     const map = L.map('map', {
-      center: [64.039419, 20.047025],
+      center: [64.005209, 20.004325],
       zoom: 13
     });
-
     // Base layers
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© OpenStreetMap contributors'
     });
-
     const googleSat = L.tileLayer('http://www.google.cn/maps/vt?lyrs=s@189&gl=cn&x={x}&y={y}&z={z}', {
       maxZoom: 19,
       attribution: '© Google Satellite'
     });
-
     // Set Google as default
     googleSat.addTo(map);
-
     const baseLayers = {
       "Google Satellite": googleSat,
       "OpenStreetMap": osm
     };
-
     L.control.layers(baseLayers, null, { position: 'bottomright' }).addTo(map);
-
     // Track styling
     const colorMap = {
-      "5 km": "white",
-      "10 km": "darkred",
-      "15 km": "orange"
+      "Årets slinga": "orange"
     };
-
     const routeLayers = {
-      "5 km": L.layerGroup(),
-      "10 km": L.layerGroup(),
-      "15 km": L.layerGroup()
+      "Årets slinga": L.layerGroup()
     };
-
     // Load GeoJSON
     fetch('TavelsjoSocial.geojson')
       .then(res => res.json())
       .then(data => {
+        const allLayers = [];
         data.features.forEach(feature => {
           const namn = feature.properties.Namn?.trim();
           const layer = L.geoJSON(feature, {
             style: {
-              color: colorMap[namn] || "blue",
+              color: colorMap[namn] || "orange",
               weight: 4,
               opacity: 1
             },
             onEachFeature: (feature, layer) => {
-              layer.bindPopup("Track: " + namn);
+              const km = feature.properties.Distance_km;
+              const year = feature.properties.Year;
+              const label = (year ? year + ' – ' : '') + namn + (km ? ' (' + km + ' km)' : '');
+              layer.bindPopup(label);
             }
           });
           if (routeLayers[namn]) {
             routeLayers[namn].addLayer(layer);
           }
+          allLayers.push(layer);
         });
-
-        // Add in order so 5 km is on top
-        routeLayers["15 km"].addTo(map);
-        routeLayers["10 km"].addTo(map);
-        routeLayers["5 km"].addTo(map);
+        routeLayers["Årets slinga"].addTo(map);
+        // Fit map to the route
+        if (allLayers.length) {
+          const group = L.featureGroup(allLayers);
+          map.fitBounds(group.getBounds(), { padding: [30, 30] });
+        }
       });
-
     // Track toggles
     const legend = L.control({ position: "topleft" });
     legend.onAdd = function () {
       const div = L.DomUtil.create("div", "legend");
       div.innerHTML = `
-        <strong>Löprundor:</strong><br/>
-        <div><input type="checkbox" id="chk-5" checked><span class="legend-color-box" style="background:white;"></span>5 km</div>
-        <div><input type="checkbox" id="chk-10" checked><span class="legend-color-box" style="background:darkred;"></span>10 km</div>
-        <div><input type="checkbox" id="chk-15" checked><span class="legend-color-box" style="background:orange;"></span>15 km</div>
+        <strong>Löprunda 2026:</strong><br/>
+        <div><input type="checkbox" id="chk-arets" checked><span class="legend-color-box" style="background:orange;"></span>Årets slinga (~10,5 km)</div>
       `;
       return div;
     };
     legend.addTo(map);
-
     function toggleLayer(id, key) {
       const checkbox = document.getElementById(id);
       checkbox.addEventListener('change', () => {
@@ -136,16 +120,11 @@
         }
       });
     }
-
-    toggleLayer("chk-5", "5 km");
-    toggleLayer("chk-10", "10 km");
-    toggleLayer("chk-15", "15 km");
-
+    toggleLayer("chk-arets", "Årets slinga");
     // 📍 GPS tracking with toggle
     let userMarker;
     let watchId = null;
     let isTracking = false;
-
     const locateControl = L.control({ position: 'topright' });
     locateControl.onAdd = function () {
       const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
@@ -153,7 +132,6 @@
       return div;
     };
     locateControl.addTo(map);
-
     function startTracking() {
       watchId = navigator.geolocation.watchPosition(
         function (pos) {
@@ -176,7 +154,6 @@
       isTracking = true;
       document.getElementById("locateBtn").innerText = "🟢"; // active icon
     }
-
     function stopTracking() {
       if (watchId !== null) {
         navigator.geolocation.clearWatch(watchId);
@@ -189,7 +166,6 @@
       isTracking = false;
       document.getElementById("locateBtn").innerText = "📍"; // default icon
     }
-
     document.getElementById('locateBtn').onclick = function (e) {
       e.preventDefault();
       if (!isTracking) {
